@@ -1,7 +1,9 @@
-[generic]
+[directory]
 log_dir = logs
 csv_dir = csv/in
 old_csv_dir = csv/done
+
+[database]
 db_user = USERNAME
 db_password = PASSWORD
 db_server = HOSTNAME
