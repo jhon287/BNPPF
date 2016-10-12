@@ -1,0 +1,9 @@
+[generic]
+log_dir = logs
+csv_dir = csv/in
+old_csv_dir = csv/done
+db_user = USERNAME
+db_password = PASSWORD
+db_server = HOSTNAME
+db_port = 3306
+db_name = DBNAME
