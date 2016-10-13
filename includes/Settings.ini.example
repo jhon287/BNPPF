@@ -1,7 +1,7 @@
 [directory]
-log_dir = logs
-csv_dir = csv/in
-old_csv_dir = csv/done
+log = logs
+in = csv/in
+done = csv/done
 
 [database]
 db_user = USERNAME
