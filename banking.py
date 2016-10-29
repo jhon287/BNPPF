@@ -1,44 +1,51 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import glob
 import re
 import sys
 import os
-from datetime import datetime
 import ConfigParser
-import mysql
+import mysql.connector
+
+from datetime import datetime
+
 
 config = ConfigParser.ConfigParser()
 config.read('includes/Settings.ini')
 
-db_user = config.get('database', 'db_user')
-db_password = config.get('database', 'db_password')
-db_host = config.get('database', 'db_server')
-db_name = config.get('database', 'db_name')
+db = {}
+db['user'] = config.get('database', 'user')
+db['password'] = config.get('database', 'password')
+db['server'] = config.get('database', 'server')
+db['database'] = config.get('database', 'name')
+db['port'] = config.get('database','port')
 
-dir_in = config.get('directory', 'in')
-dir_done = config.get('directory', 'done')
+dir = {}
+dir['in'] = config.get('directory', 'in')
+dir['done'] = config.get('directory', 'done')
 
 con = None
 accounts = {}
 from_db = {}
 
 # Directories check
-if not os.path.exists(dir_in):
-    print "%s does not exists! Please create it..." % dir_in
+if not os.path.exists(dir['in']):
+    print "%s does not exists! Please create it..." % dir['in']
     sys.exit(1)
-elif not os.path.exists(dir_done):
-    print "%s does not exists! Please create it..." % dir_done
+elif not os.path.exists(dir['done']):
+    print "%s does not exists! Please create it..." % dir['done']
     sys.exit(1)
 
 try:
-	#con = mysql.connector.connect(
-	#	user=db_user, password=db_password,
-	#	host=db_host,
-	#	database=db_name
-	#)
+	con = mysql.connector.connect(
+			user = db['user'],
+			password = db['password'],
+			host = db['server'],
+			port = db['port'],
+			database = db['database']
+	)
 	#cur = con.cursor()
-	for f in glob.glob(dir_in+'/*'):
+	for f in glob.glob(dir['in']+'/*'):
 		if not os.path.isfile(f): continue
 		fd = open(f,'r')
 		first_line = True
@@ -102,7 +109,7 @@ try:
 			#cur.execute(sql)
 		fd.close()
 		# Move CSV files to old_csv_dir
-		os.rename(f,"%s.%s" % (f.replace(dir_in,dir_done),datetime.now().strftime("%Y%m%d%H%M%S")))
+		os.rename(f,"%s.%s" % (f.replace(dir['in'],dir['done']),datetime.now().strftime("%Y%m%d%H%M%S")))
 	#con.commit()
 except:
 	print "Unexpected error:", sys.exc_info()

@@ -4,8 +4,8 @@ in = csv/in
 done = csv/done
 
 [database]
-db_user = USERNAME
-db_password = PASSWORD
-db_server = HOSTNAME
-db_port = 3306
-db_name = DBNAME
+user = USERNAME
+password = PASSWORD
+server = HOSTNAME
+port = 3306
+name = DBNAME
