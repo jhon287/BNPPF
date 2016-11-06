@@ -44,7 +44,7 @@ try:
 			port = db['port'],
 			database = db['database']
 	)
-	#cur = con.cursor()
+	cur = con.cursor()
 	for f in glob.glob(dir['in']+'/*'):
 		if not os.path.isfile(f): continue
 		fd = open(f,'r')
@@ -65,13 +65,18 @@ try:
 			# P2M ^TERMINAL NO [0-9]+ DATE : [0-9][0-9]-[0-9][0-9]-20[0-9][0-9].*DATE VALEUR : [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$
 			print elements
 			t_ref = elements[0].strip('"')
+                        # Good sequence number ?
+                        if not re.match('^20[0-9]{2}-[0-9]{4}$',t_ref):
+                            print "SKIP - Wrong sequence number detected %s !" % t_ref
+                            continue
+
 			d = datetime.strptime(elements[1].strip('"'),'%d/%m/%Y')
 			t_date = d.strftime('%Y%m%d')
 			# Amount (replace comma (,) by dot (.))
-			t_amount = elements[2].strip('"').replace(',','.')
-			t_currency = elements[3].strip('"')
+			t_amount = elements[3].strip('"').replace('.','').replace(',','.')
+			t_currency = elements[4].strip('"')
 			t_type = ''
-			t_comment = elements[4].strip('"')
+			t_comment = elements[5].strip('"')
 			if re.search(".*[A-Z][A-Z][0-9][0-9].*BIC .*COMMUNICATION.*: .*DATE.*: [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$",t_comment) or \
 			   re.search("^DU COMPTE NO [A-Z][A-Z][0-9][0-9].*COMMUNICATION:.*DATE VALEUR : [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$",t_comment) or \
 			   re.search(".*[A-Z][A-Z][0-9][0-9].*BIC .* REFERENCE DONNEUR D\'ORDRE : .*COMMUNICATION.*:",t_comment):
@@ -102,15 +107,15 @@ try:
 			elif re.search("^TERMINAL NO [0-9]+ DATE : [0-9][0-9]-[0-9][0-9]-20[0-9][0-9].*DATE VALEUR : [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$",t_comment): t_type = 'P2M'
 			# Unknown
 			else: t_type = 'Inconnu'
-			t_account = re.sub('("| )','',elements[5]).strip()
+			t_account = re.sub('("| )','',elements[6]).strip()
 			# New account ?
 			print t_type,t_account
-			#sql = 'CALL addTransaction("%s","%s",%f,"%s","%s","%s","%s");' % (t_ref,t_date,float(t_amount),t_currency,t_type,t_comment,t_account)
-			#cur.execute(sql)
+			sql = 'CALL addTransaction("%s","%s",%f,"%s","%s","%s","%s");' % (t_ref,t_date,float(t_amount),t_currency,t_type,t_comment,t_account)
+			cur.execute(sql)
 		fd.close()
 		# Move CSV files to old_csv_dir
 		os.rename(f,"%s.%s" % (f.replace(dir['in'],dir['done']),datetime.now().strftime("%Y%m%d%H%M%S")))
-	#con.commit()
+	con.commit()
 except:
 	print "Unexpected error:", sys.exc_info()
 	sys.exit(1)
