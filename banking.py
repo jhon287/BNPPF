@@ -28,6 +28,7 @@ accounts = {}
 from_db = {}
 
 def get_statement_type(counterparty='',detail=''):
+    # Search using COUNTERPARTY
     if re.search("^[A-Z][A-Z][0-9][0-9]", counterparty) or \
        re.search("^[0-9]{3}-[0-9]{7}-[0-9]{2}$", counterparty) or \
        re.search("^VIREMENT EUROPEEN ", counterparty) or \
@@ -47,6 +48,7 @@ def get_statement_type(counterparty='',detail=''):
     elif re.search("^FRAIS MENSUELS D'(EQUIPEMENT|UTILISATION)$", counterparty) or \
          re.search("^FRAIS DE PORT$", counterparty):
          return "Frais"
+    # Search using DETAIL
     else:
         if re.search(".*[A-Z][A-Z][0-9][0-9].*COMMUNICATION.*:.*DATE.*: [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail) or \
            re.search("^DU COMPTE NO [A-Z][A-Z][0-9][0-9].*COMMUNICATION:.*DATE VALEUR : [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail) or \
