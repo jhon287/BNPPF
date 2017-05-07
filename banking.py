@@ -135,7 +135,7 @@ try:
             t_type = get_statement_type(counterparty=t_counterparty, detail=t_detail)
             if t_type == "Inconnu":
                 print line
-            sql = 'CALL addTransaction("%s","%s",%f,"%s","%s","%s","%s");' % (t_ref,t_date,float(t_amount),t_currency,t_type,t_comment,t_account)
+            sql = 'CALL addTransaction("%s", "%s", %f, "%s", "%s", "%s", "%s");' % (t_ref, t_date, float(t_amount), t_currency, t_type, t_detail, t_account)
             cur.execute(sql)
         fd.close()
         os.rename(f, "%s" % f.replace(dir['in'], dir['done']))
