@@ -45,6 +45,7 @@ def get_statement_type(counterparty='',detail=''):
     elif re.search("^PAIEMENT PAR CARTE DE BANQUE$", counterparty): return "Carte"
     elif re.search("^REDEVANCE MENSUELLE", counterparty): return "Redevance"
     elif re.search("^CHARGEMENT CARTE PROTON$", counterparty): return "Proton"
+    elif re.search("^EASY SAVE ", counterparty): return "Easy Save"
     elif re.search("^FRAIS MENSUELS D'(EQUIPEMENT|UTILISATION)$", counterparty) or \
          re.search("^FRAIS DE PORT$", counterparty):
          return "Frais"
