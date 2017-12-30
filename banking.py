@@ -123,7 +123,7 @@ try:
             d = datetime.strptime(elements[1].strip('"'),'%d/%m/%Y')
             t_date = d.strftime('%Y%m%d')
             # Amount (replace comma (,) by dot (.))
-            t_amount = elements[3].strip('"').replace('.','').replace(',','.')
+            t_amount = elements[3].strip('"')
             t_currency = elements[4].strip('"')
             if counterparty:
                 t_counterparty = elements[5].strip('"').strip()
