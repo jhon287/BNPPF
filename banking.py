@@ -35,17 +35,17 @@ def get_statement_type(counterparty='',detail=''):
        re.search("^VOTRE EPARGNE AUTOMATIQUE ", counterparty) or \
        re.search("^DOMICILIATION$", counterparty):
        return "Virement"
-    elif re.search("^ASSURANCE COMPTE$", counterparty): return "Assurance"
-    elif re.search("^INTERETS NETS ", counterparty): return "Interets"
-    elif re.search("^RETRAIT D'ARGENT ", counterparty): return "Retrait"
+    elif re.search("^ASSURANCE( COMPTE)?$", counterparty): return "Assurance"
+    elif re.search("^INTERETS NETS", counterparty): return "Interets"
+    elif re.search("^RETRAIT D'ARGENT", counterparty): return "Retrait"
     elif re.search("^VERSEMENT ESPECES$", counterparty): return "Cash"
     elif re.search("^GLOBALISATION 9 OPERATIONS POS", counterparty): return "P2M"
     elif re.search("^PAIEMENT A BANK CARD COMPANY$", counterparty): return "BCC"
-    elif re.search("^VERSEMENT DE VOTRE SERVICE BONUS$", counterparty): return "Bonus"
+    elif re.search("^VERSEMENT DE VOTRE SERVICE BONUS", counterparty): return "Bonus"
     elif re.search("^PAIEMENT PAR CARTE DE BANQUE$", counterparty): return "Carte"
     elif re.search("^REDEVANCE MENSUELLE", counterparty): return "Redevance"
     elif re.search("^CHARGEMENT CARTE PROTON$", counterparty): return "Proton"
-    elif re.search("^EASY SAVE ", counterparty): return "Easy Save"
+    elif re.search("^EASY SAVE", counterparty): return "Easy Save"
     elif re.search("^FRAIS MENSUELS D'(EQUIPEMENT|UTILISATION)$", counterparty) or \
          re.search("^FRAIS DE PORT$", counterparty):
          return "Frais"
@@ -70,16 +70,19 @@ def get_statement_type(counterparty='',detail=''):
              re.search("VIREMENT AU COMPTE", detail) or \
              re.search("VIREMENT AVEC DATE-MEMO", detail):
              return  'Virement'
+        elif re.search("^AVEC LA CARTE 6703.* P2P MOBIL.* DATE VALEUR : [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail) or \
+             re.search("^TERMINAL NO [0-9]+ DATE : [0-9][0-9]-[0-9][0-9]-20[0-9][0-9].*DATE VALEUR : [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail):
+             return 'P2M'
         elif re.search("AVEC LA CARTE 6703.* DATE VALEUR : [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail): return 'Carte'
         elif re.search("ORDRE PERMANENT", detail): return 'Ordre Permanent'
         elif re.search("VERSEMENT CHEQUE", detail): return 'Versement'
         elif re.search("^DE VOTRE CARTE PROTON", detail) or \
              re.search("^REMBOURSEMENT DU SOLDE.*DE VOTRE CARTE PROTON", detail):
              return 'Proton'
-        elif re.search("^TERMINAL NO [0-9]+ DATE : [0-9][0-9]-[0-9][0-9]-20[0-9][0-9].*DATE VALEUR : [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail): return 'P2M'
         elif re.search("^COMFORT PACK ", detail): return "Redevance"
         elif re.search("^VOTRE FIDELITE EST RECOMPENSEE ", detail): return "Bonus"
         elif re.search("^(DATE VALEUR|^EXECUTE LE)", detail): return "Divers"
+        elif re.search("^COMPTE INTERNE MASTERCARD.*ETAT DE DEPENSES NUMERO", detail): return "Mastercard"
         else: return 'Inconnu'
 
 # Directories check
@@ -123,7 +126,7 @@ try:
             d = datetime.strptime(elements[1].strip('"'),'%d/%m/%Y')
             t_date = d.strftime('%Y%m%d')
             # Amount (replace comma (,) by dot (.))
-            t_amount = elements[3].strip('"')
+            t_amount = elements[3].strip('"').replace(',', '.')
             t_currency = elements[4].strip('"')
             if counterparty:
                 t_counterparty = elements[5].strip('"').strip()
