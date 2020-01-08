@@ -16,7 +16,7 @@ def get_statement_type(counterparty='', detail=''):
        re.search("^VOTRE EPARGNE AUTOMATIQUE ", counterparty) or \
        re.search("^DOMICILIATION$", counterparty):
         return "Virement"
-    elif re.search("^ASSURANCE( COMPTE)?$", counterparty):
+    elif re.search(r"^ASSURANCE((\-|\s)COMPTE)?$", counterparty):
         return "Assurance"
     elif re.search("^INTERETS NETS", counterparty):
         return "Interets"
@@ -112,6 +112,7 @@ def get_statement_type(counterparty='', detail=''):
             return 'Inconnu'
 
 
+accounts = {}
 settings = {}
 con = None
 
@@ -149,7 +150,7 @@ try:
                  open(f, 'r', encoding='utf8', errors="ignore")]
         first_line = True
         for line in lines:
-            transation = {}
+            transaction = {}
             if first_line:
                 if re.search("CONTREPARTIE DE (L'OPERATION|LA TRANSACTION)",
                              line, re.IGNORECASE):
@@ -162,45 +163,54 @@ try:
             if not line.strip():
                 continue
             elements = line.replace('"', '').split(';')
-            transation['ref'] = elements[0].strip('"')
+            transaction['ref'] = elements[0].strip('"')
             # Good sequence number ?
-            if not re.match('^20[0-9]{2}-[0-9]{4}$', transation['ref']):
+            if not re.match('^20[0-9]{2}-[0-9]{4}$', transaction['ref']):
                 print("SKIP - Wrong sequence number detected {} !"
-                      .format(transation['ref']))
+                      .format(transaction['ref']))
                 continue
             d = datetime.strptime(elements[1].strip('"'), '%d/%m/%Y')
-            transation['date'] = d.strftime('%Y%m%d')
-            transation['amount'] = elements[3].strip('"').replace(',', '.')
-            transation['currency'] = elements[4].strip('"')
+            transaction['date'] = d.strftime('%Y%m%d')
+            transaction['amount'] = elements[3].strip('"').replace(',', '.')
+            transaction['currency'] = elements[4].strip('"')
             if counterparty:
-                transation['counterparty'] = elements[5].strip('"').strip()
-                transation['detail'] = elements[6].strip('"').strip()
-                transation['account'] = re.sub('("| )', '',
-                                               elements[7]).strip()
+                transaction['counterparty'] = elements[5].strip('"').strip()
+                transaction['detail'] = elements[6].strip('"').strip()
+                transaction['account'] = \
+                    re.sub('("| )', '', elements[7]).strip()
             else:
-                transation['counterparty'] = ''
-                transation['detail'] = elements[5].strip('"').strip()
-                transation['account'] = re.sub('("| )', '',
-                                               elements[6]).strip()
-            transation['type'] = get_statement_type(
-                        counterparty=transation['counterparty'],
-                        detail=transation['detail'])
-            if transation['type'] == "Inconnu":
-                print(line)
+                transaction['counterparty'] = ''
+                transaction['detail'] = elements[5].strip('"').strip()
+                transaction['account'] = \
+                    re.sub('("| )', '', elements[6]).strip()
+            transaction['type'] = get_statement_type(
+                        counterparty=transaction['counterparty'],
+                        detail=transaction['detail'])
+            if transaction['type'] == "Inconnu":
+                print('ERROR: ', line)
             sql = 'CALL addTransaction("{ref}", "{date}", {amount}, ' \
                   '"{currency}", "{type}", "{detail}", "{account}");'.format(
-                    ref=transation['ref'],
-                    date=transation['date'],
-                    amount=transation['amount'],
-                    currency=transation['currency'],
-                    type=transation['type'],
-                    detail=transation['detail'],
-                    account=transation['account'],
+                    ref=transaction['ref'],
+                    date=transaction['date'],
+                    amount=transaction['amount'],
+                    currency=transaction['currency'],
+                    type=transaction['type'],
+                    detail=transaction['detail'],
+                    account=transaction['account'],
                   )
             cur.execute(sql)
+            if transaction['account'] not in accounts:
+                accounts[transaction['account']] = 0
+            accounts[transaction['account']] += 1
         os.rename(f, f.replace(settings['directory']['in'],
                                settings['directory']['done']))
     con.commit()
+    print('--------------------------------------------------------')
+    print('Transactions Summary:')
+    for k, v in accounts.items():
+        print(' - {account} -> {transactions}'.format(
+                account=k, transactions=v))
+    print('--------------------------------------------------------')
 except Exception:
     print("Unexpected error:", sys.exc_info())
     sys.exit(1)
