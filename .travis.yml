@@ -1,0 +1,28 @@
+os: linux
+
+addons:
+  hosts:
+    - db
+
+services:
+  - mysql
+
+language: python
+python:
+  - "2.7"
+  - "3.4"
+  - "3.5"
+  - "3.6"
+  - "3.7"
+  - "3.8"
+  - "nightly"
+before_install:
+  - pip install flake8
+  - mysql -e 'CREATE DATABASE BNPPF;' -u root
+  - mysql -e 'CREATE USER "myusername"@"localhost" IDENTIFIED BY "mypassword";' -u root
+  - mysql -e 'GRANT EXECUTE ON BNPPF.* TO "myusername"@"localhost";' -u root
+install:
+  - pip install -r ./requirements.txt
+script:
+  - flake8 ./banking.py
+  - python ./banking.py
