@@ -21,8 +21,9 @@ before_install:
   - mysql -e 'CREATE DATABASE BNPPF;' -u root
   - mysql -e 'CREATE USER "myusername"@"localhost" IDENTIFIED BY "mypassword";' -u root
   - mysql -e 'GRANT EXECUTE ON BNPPF.* TO "myusername"@"localhost";' -u root
+  - cat sql/* | mysql -u root BNPPF
 install:
-  - pip install -r ./requirements.txt
+  - pip install -r requirements.txt
 script:
-  - flake8 ./banking.py
-  - python ./banking.py
+  - flake8 *.py
+  - python banking.py
