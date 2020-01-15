@@ -5,7 +5,7 @@ LABEL maintainer="sabbe.jonathan@gmail.com"
 WORKDIR /app
 
 COPY ./conf ./conf
-COPY ./banking.py ./requirements.txt ./
+COPY ./*.py ./requirements.txt ./
 COPY ./start.sh /
 
 RUN apk add -U curl && \
