@@ -18,10 +18,8 @@ python:
   - "nightly"
 before_install:
   - pip install flake8
-  - mysql -e 'CREATE DATABASE BNPPF;' -u root
-  - mysql -e 'CREATE USER "myusername"@"localhost" IDENTIFIED BY "mypassword";' -u root
-  - mysql -e 'GRANT EXECUTE ON BNPPF.* TO "myusername"@"localhost";' -u root
-  - cat sql/* | mysql -u root BNPPF
+  - cat tests/sql/*.sql | mysql -u root -v
+  - cat sql/*.sql | mysql -u root -v BNPPF
 install:
   - pip install -r requirements.txt
 script:
