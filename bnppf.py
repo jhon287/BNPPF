@@ -20,7 +20,7 @@ class BNPPF:
                .format(self.ref, self.date, self.amount, self.currency,
                        self.type, self.detail, self.account)
 
-    def __get_type__(self, counterparty='', detail=''):
+    def _get_statement_type(self, counterparty='', detail=''):
         # COUNTERPARTY
         if re.search("^[A-Z][A-Z][0-9][0-9]", counterparty) or \
            re.search("^[0-9]{3}-[0-9]{7}-[0-9]{2}$", counterparty) or \
@@ -150,7 +150,7 @@ class BNPPF:
                 self.counterparty = ''
                 self.detail = elements[5].strip()
                 self.account = re.sub('("| )', '', elements[6]).strip()
-            self.type = self.__get_type__(
+            self.type = self._get_statement_type(
                 counterparty=self.counterparty,
                 detail=self.detail)
             if self.type == "Inconnu":
