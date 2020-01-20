@@ -21,6 +21,8 @@ class BNPPF:
                        self.type, self.detail, self.account)
 
     def _get_statement_type(self, counterparty='', detail=''):
+        counterparty = counterparty.strip()
+        detail = detail.strip()
         # COUNTERPARTY
         if re.search("^[A-Z][A-Z][0-9][0-9]", counterparty) or \
            re.search("^[0-9]{3}-[0-9]{7}-[0-9]{2}$", counterparty) or \
@@ -42,13 +44,14 @@ class BNPPF:
             return "BCC"
         elif re.search("^VERSEMENT DE VOTRE SERVICE BONUS", counterparty):
             return "Bonus"
-        elif re.search("^PAIEMENT PAR CARTE DE (BANQUE|DEBIT)$", counterparty):
+        elif re.search("^PAIEMENT PAR( CARTE DE (BANQUE|DEBIT))?$",
+                       counterparty):
             return "Carte"
         elif re.search("^REDEVANCE MENSUELLE", counterparty):
             return "Redevance"
         elif re.search("^CHARGEMENT CARTE PROTON$", counterparty):
             return "Proton"
-        elif re.search("^EASY SAVE", counterparty):
+        elif re.search("^(EASY SAVE|AUTOMATIQUE$)", counterparty):
             return "Easy Save"
         elif re.search(
                 "^FRAIS MENSUELS D'(EQUIPEMENT|UTILISATION)$",
@@ -140,7 +143,12 @@ class BNPPF:
                 return True
             d = datetime.strptime(elements[1], '%d/%m/%Y')
             self.date = d.strftime('%Y%m%d')
-            self.amount = float(elements[3].replace(',', '.'))
+            if re.search(r'^(\-)?\d{1,3}\.\d{3},\d{1,2}$',  # 2.720,00
+                         elements[3].strip()):
+                self.amount = float(elements[3]
+                                    .replace('.', '').replace(',', '.'))
+            else:
+                self.amount = float(elements[3].replace(',', '.'))
             self.currency = elements[4].strip()
             if counterparty:
                 self.counterparty = elements[5].strip()
