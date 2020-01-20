@@ -79,7 +79,7 @@ try:
             accounts[account] += 1
         os.rename(f, f.replace(settings['directory']['in'],
                                settings['directory']['done']))
-    con.commit()
+        con.commit()  # Commit changes after each file
     print('--------------------------------------------------------')
     print('Transactions Summary:')
     for k, v in accounts.items():
