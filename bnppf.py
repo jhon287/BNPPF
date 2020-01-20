@@ -1,4 +1,5 @@
 import re
+import csv
 from datetime import datetime
 
 
@@ -135,8 +136,9 @@ class BNPPF:
 
     def parse(self, line='', format='csv', counterparty=True):
         if format == 'csv':
-            elements = line.replace('"', '').split(';')
-            map(str.strip('"'), elements)
+            elements = [element for element in
+                        csv.reader([line], delimiter=';')][0]
+            map(str(str).strip(), elements)
             self.ref = elements[0]
             if not re.match('^20[0-9]{2}-[0-9]{4}$', self.ref):
                 self.ref = None
@@ -144,20 +146,20 @@ class BNPPF:
             d = datetime.strptime(elements[1], '%d/%m/%Y')
             self.date = d.strftime('%Y%m%d')
             if re.search(r'^(\-)?\d{1,3}\.\d{3},\d{1,2}$',  # 2.720,00
-                         elements[3].strip()):
+                         elements[3]):
                 self.amount = float(elements[3]
                                     .replace('.', '').replace(',', '.'))
             else:
                 self.amount = float(elements[3].replace(',', '.'))
-            self.currency = elements[4].strip()
+            self.currency = elements[4]
             if counterparty:
-                self.counterparty = elements[5].strip()
-                self.detail = elements[6].strip()
-                self.account = re.sub('("| )', '', elements[7]).strip()
+                self.counterparty = elements[5]
+                self.detail = elements[6].rstrip('"')
+                self.account = elements[7].replace(' ', '')
             else:
                 self.counterparty = ''
-                self.detail = elements[5].strip()
-                self.account = re.sub('("| )', '', elements[6]).strip()
+                self.detail = elements[5].rstrip('"')
+                self.account = elements[6].replace(' ', '')
             self.type = self._get_statement_type(
                 counterparty=self.counterparty,
                 detail=self.detail)
