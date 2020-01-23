@@ -41,45 +41,49 @@ try:
         if not os.path.isfile(f):
             continue
         print("Current: " + f)
-        lines = [line.rstrip('\n') for line in
-                 open(f, 'r', encoding='utf8', errors='ignore')]
-        first_line = True
-        for line in lines:
-            transaction = bnppf.BNPPF()
-            if first_line:
-                if re.search("CONTREPARTIE DE (L'OPERATION|LA TRANSACTION)",
-                             line, re.IGNORECASE):
-                    counterparty = True
-                else:
-                    counterparty = False
-                first_line = False
-                continue
-            if not line.strip():  # Empty line ?
-                continue
-            if not transaction.parse(line=line, format='csv',
-                                     counterparty=counterparty):
-                print('ERROR:', transaction.get_all())
-                sys.exit(1)
-            elif transaction.get_ref() is None:
-                continue  # Skipping invalid sequence number
-            account = transaction.get_account()
-            sql = 'CALL addTransaction("{ref}", "{date}", {amount}, ' \
-                  '"{currency}", "{type}", "{detail}", "{account}");'.format(
-                    ref=transaction.get_ref(),
-                    date=transaction.get_date(),
-                    amount=transaction.get_amount(),
-                    currency=transaction.get_currency(),
-                    type=transaction.get_type(),
-                    detail=transaction.get_detail(),
-                    account=account,
-                  )
-            cur.execute(sql)
-            if account not in accounts:
-                accounts[account] = 0
-            accounts[account] += 1
-        os.rename(f, f.replace(settings['directory']['in'],
-                               settings['directory']['done']))
-        con.commit()  # Commit changes after each file
+
+        with open(f, 'r', encoding='utf8', errors='ignore') as myfile:
+            first_line = True
+            for line in myfile:
+                line = line.rstrip('\n')
+                transaction = bnppf.BNPPF()
+                if first_line:
+                    if re.search("CONTREPARTIE DE "
+                                 "(L'OPERATION|LA TRANSACTION)",
+                                 line, re.IGNORECASE):
+                        counterparty = True
+                    else:
+                        counterparty = False
+                    first_line = False
+                    continue
+                if not line.strip():  # Empty line ?
+                    continue
+                if not transaction.parse(line=line, format='csv',
+                                         counterparty=counterparty):
+                    print('ERROR:', transaction.get_all())
+                    sys.exit(1)
+                elif transaction.get_ref() is None:
+                    continue  # Skipping invalid sequence number
+                account = transaction.get_account()
+                sql = 'CALL addTransaction("{ref}", "{date}", {amount}, ' \
+                      '"{currency}", "{type}", "{detail}", ' \
+                      '"{account}");'.format(
+                        ref=transaction.get_ref(),
+                        date=transaction.get_date(),
+                        amount=transaction.get_amount(),
+                        currency=transaction.get_currency(),
+                        type=transaction.get_type(),
+                        detail=transaction.get_detail(),
+                        account=account,
+                      )
+                cur.execute(sql)
+                if account not in accounts:
+                    accounts[account] = 0
+                accounts[account] += 1
+            myfile.close()
+            os.rename(f, f.replace(settings['directory']['in'],
+                                   settings['directory']['done']))
+            con.commit()  # Commit changes after each file
     print('--------------------------------------------------------')
     print('Transactions Summary:')
     for k, v in accounts.items():
