@@ -45,7 +45,7 @@ class BNPPF:
             return "BCC"
         elif re.search("^VERSEMENT DE VOTRE SERVICE BONUS", counterparty):
             return "Bonus"
-        elif re.search("^PAIEMENT PAR( CARTE DE (BANQUE|DEBIT))?$",
+        elif re.search("^PAIEMENT (PAR|AVEC LA)( CARTE DE (BANQUE|DEBIT))?$",
                        counterparty):
             return "Carte"
         elif re.search("^REDEVANCE MENSUELLE", counterparty):
@@ -59,7 +59,7 @@ class BNPPF:
                 counterparty
              ) or re.search("^FRAIS DE PORT$", counterparty):
             return "Frais"
-        elif re.search("^ANNULATION PAIEMENT", counterparty):
+        elif re.search("^ANNULATION (DU )?PAIEMENT", counterparty):
             return "Annulation"
         # DETAIL
         else:
