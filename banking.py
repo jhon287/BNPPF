@@ -53,6 +53,7 @@ try:
                 else:
                     counterparty = False
                 first_line = False
+                print("Counterparty: " + str(counterparty))
                 continue
             if not line.strip():  # Empty line ?
                 continue
