@@ -1,27 +1,18 @@
-os: linux
+dist:  bionic
 
-addons:
-  hosts:
-    - db
+env:
+  - PYTHON_VERSION=3.5 MARIADB_VERSION=10.5
+  - PYTHON_VERSION=3.6 MARIADB_VERSION=10.5
+  - PYTHON_VERSION=3.7 MARIADB_VERSION=10.5
+  - PYTHON_VERSION=3.8 MARIADB_VERSION=10.5
+  - PYTHON_VERSION=3.9-rc MARIADB_VERSION=10.5
 
-services:
-  - mysql
+services: docker
 
-language: python
-python:
-  - "2.7"
-  - "3.4"
-  - "3.5"
-  - "3.6"
-  - "3.7"
-  - "3.8"
-  - "nightly"
-before_install:
-  - pip install flake8
-  - cat tests/sql/*.sql | mysql -u root -v
-  - cat sql/*.sql | mysql -u root -v BNPPF
-install:
-  - pip install -r requirements.txt
+install: pip install --user flake8 pytest
+
 script:
-  - flake8 *.py
-  - python banking.py
+  - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+  - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+  - mkdir -vp csv/{in,done} && cp tests/csv/*.csv csv/in/
+  - docker-compose up --abort-on-container-exit --exit-code-from app

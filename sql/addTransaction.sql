@@ -1,5 +1,7 @@
+USE BNPPF;
+
 DELIMITER ;;
-CREATE DEFINER=`root`@`127.0.0.1` PROCEDURE `addTransaction`(IN sequence VARCHAR(9), IN day VARCHAR(8), IN amount DOUBLE, IN currency VARCHAR(3), IN type TEXT, IN comment TEXT, IN account VARCHAR(34))
+CREATE DEFINER=`root`@`%` PROCEDURE `addTransaction`(IN sequence VARCHAR(9), IN day VARCHAR(8), IN amount DOUBLE, IN currency VARCHAR(3), IN type TEXT, IN comment TEXT, IN account VARCHAR(34))
 BEGIN
 	INSERT INTO Transactions (reference,dateOf,amount,currency,typeOf,comment,account,created)
 		SELECT * FROM (SELECT sequence, day, amount, currency, type, comment, account,NOW()) AS tmp

@@ -1,4 +1,6 @@
-FROM python:3-alpine
+ARG PYTHON_VERSION
+
+FROM python:${PYTHON_VERSION}-alpine
 
 LABEL maintainer="sabbe.jonathan@gmail.com"
 
