@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [3.5, 3.6, 3.7, 3.8]
+        python: [3.6, 3.7, 3.8, 3.9, 3.10.0-rc.1]
         mariadb: [10.5]
 
     name: Python-${{ matrix.python }} - MariaDB-${{ matrix.mariadb}}
@@ -32,4 +32,5 @@ jobs:
       run: |
         mkdir -vp csv/{in,done}
         cp tests/csv/*.csv csv/in/
-        PYTHON_VERSION=${{ matrix.python }} MARIADB_VERSION=${{ matrix.mariadb}} docker-compose up --abort-on-container-exit --exit-code-from app
+        [ ${{ matrix.python }} == "3.10.0-rc.1" ] && PYTHON_VERSION=3.10-rc || PYTHON_VERSION=${{ matrix.python }}
+        PYTHON_VERSION=${PYTHON_VERSION} MARIADB_VERSION=${{ matrix.mariadb}} docker-compose up --abort-on-container-exit --exit-code-from app
