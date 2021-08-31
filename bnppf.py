@@ -39,7 +39,8 @@ class BNPPF:
             return "Retrait"
         elif re.search("^VERSEMENT ESPECES$", counterparty):
             return "Cash"
-        elif re.search("^GLOBALISATION [0-9] OPERATIONS POS", counterparty):
+        elif re.search("^GLOBALISATION [0-9] OPERATIONS POS", counterparty) or \
+             re.search("^PAIEMENT MOBILE", counterparty):
             return "P2M"
         elif re.search("^PAIEMENT A BANK CARD COMPANY$", counterparty):
             return "BCC"
