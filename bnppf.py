@@ -62,6 +62,8 @@ class BNPPF:
             return "Frais"
         elif re.search("^ANNULATION (DU )?PAIEMENT", counterparty):
             return "Annulation"
+        elif re.search("^VERSEMENT DE", counterparty):
+            return "Versement"
         # DETAIL
         else:
             if re.search(".*[A-Z][A-Z][0-9][0-9].*COMMUNICATION.*:.*DATE.*: "
