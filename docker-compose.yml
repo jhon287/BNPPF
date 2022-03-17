@@ -4,7 +4,7 @@ services:
     build:
       context: .
       args: 
-        - PYTHON_VERSION=${PYTHON_VERSION:-3.8}
+        - PYTHON_VERSION=${PYTHON_VERSION:-3.10}
     image: myapp
     environment:
       WAIT_HOSTS: db:3306

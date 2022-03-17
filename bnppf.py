@@ -3,10 +3,20 @@ import csv
 from datetime import datetime
 
 
+def get_csv_version(line: str = None) -> int:
+    if re.search(r';CONTREPARTIE DE LA TRANSACTION;', line):
+        return 2
+    elif re.search(r';Type de transaction;', line):
+        return 3
+    else:
+        return 1
+
+
 class BNPPF:
 
-    def __init__(self, ref='', date='', amount=0, currency='EUR', type='',
-                 detail='', account=''):
+    def __init__(self, ref: str = '', date: str = '', amount: int = 0,
+                 currency: str = 'EUR', type: str = '', detail: str = '',
+                 account='', csv_version: int = 3):
         self.ref = ref
         self.date = date
         self.amount = amount
@@ -14,57 +24,67 @@ class BNPPF:
         self.type = type
         self.detail = detail
         self.account = account
+        self.csv_version = csv_version
 
     def __str__(self):
-        return "Ref: {}. Date: {}. Amount: {} {}. " \
-               "Type: {}. Detail: {}. Account: {}" \
-               .format(self.ref, self.date, self.amount, self.currency,
-                       self.type, self.detail, self.account)
+        return f'Ref: {self.ref}. Date: {self.date}. ' \
+               f'Amount: {self.amount} {self.currency}. ' \
+               f'Type: {self.type}. Detail: {self.detail}.' \
+               f'Account: {self.account}. CSV Version: {self.csv_version}.'
 
-    def _get_statement_type(self, counterparty='', detail=''):
+    def _get_statement_type(self, counterparty: str = '',
+                            detail: str = '', trx_type: str = ''):
         counterparty = counterparty.strip()
         detail = detail.strip()
-        # COUNTERPARTY
-        if re.search("^[A-Z][A-Z][0-9][0-9]", counterparty) or \
+        trx_type = trx_type.strip()
+
+        if trx_type == 'Virement en euros' or \
+           re.search("^[A-Z][A-Z][0-9][0-9]", counterparty) or \
            re.search("^[0-9]{3}-[0-9]{7}-[0-9]{2}$", counterparty) or \
-           re.search("^VIREMENT EUROPEEN ", counterparty) or \
-           re.search("^VOTRE EPARGNE AUTOMATIQUE ", counterparty) or \
-           re.search("^DOMICILIATION$", counterparty):
+           counterparty.startswith('VIREMENT EUROPEEN ') or \
+           counterparty.startswith('VOTRE EPARGNE AUTOMATIQUE '):
             return "Virement"
+        elif trx_type == 'Domiciliation' or counterparty == 'DOMICILIATION':
+            return 'Domiciliation'
         elif re.search(r"^ASSURANCE((\-|\s)COMPTE)?$", counterparty):
             return "Assurance"
-        elif re.search("^INTERETS NETS", counterparty):
+        elif trx_type == "Intérêts du compte d'épargne" or \
+                counterparty.startswith('INTERETS NETS'):
             return "Interets"
-        elif re.search("^RETRAIT D'(ARGENT|ESPECES)", counterparty):
+        elif trx_type.startswith('Retrait ') or \
+                re.search("^RETRAIT D'(ARGENT|ESPECES)", counterparty):
             return "Retrait"
-        elif re.search("^VERSEMENT ESPECES$", counterparty):
+        elif counterparty == 'VERSEMENT ESPECES':
             return "Cash"
-        elif re.search("^GLOBALISATION [0-9] OPERATIONS POS", counterparty) or \
-             re.search("^PAIEMENT MOBILE", counterparty):
+        elif re.search("^GLOBALISATION [0-9] OPERATIONS POS",
+                       counterparty) or \
+                counterparty.startswith('PAIEMENT MOBILE'):
             return "P2M"
-        elif re.search("^PAIEMENT A BANK CARD COMPANY$", counterparty):
+        elif trx_type == 'Paiement par carte de crédit' or \
+                counterparty == 'PAIEMENT A BANK CARD COMPANY':
             return "BCC"
-        elif re.search("^VERSEMENT DE VOTRE SERVICE BONUS", counterparty):
+        elif counterparty.startswith('VERSEMENT DE VOTRE SERVICE BONUS'):
             return "Bonus"
-        elif re.search("^PAIEMENT (PAR|AVEC LA)( CARTE DE (BANQUE|DEBIT))?$",
-                       counterparty):
+        elif trx_type == 'Paiement par carte' or \
+                re.search("^PAIEMENT (PAR|AVEC LA)"
+                          "( CARTE DE (BANQUE|DEBIT))?$", counterparty):
             return "Carte"
-        elif re.search("^REDEVANCE MENSUELLE", counterparty):
+        elif trx_type == 'Frais liés au compte' or \
+                counterparty.startswith('REDEVANCE MENSUELLE'):
             return "Redevance"
-        elif re.search("^CHARGEMENT CARTE PROTON$", counterparty):
+        elif counterparty == 'CHARGEMENT CARTE PROTON':
             return "Proton"
         elif re.search("^(EASY SAVE|AUTOMATIQUE$)", counterparty):
             return "Easy Save"
         elif re.search(
                 "^FRAIS MENSUELS D'(EQUIPEMENT|UTILISATION)$",
                 counterparty
-             ) or re.search("^FRAIS DE PORT$", counterparty):
+             ) or counterparty == 'FRAIS DE PORT':
             return "Frais"
         elif re.search("^ANNULATION (DU )?PAIEMENT", counterparty):
             return "Annulation"
-        elif re.search("^VERSEMENT DE", counterparty):
+        elif counterparty.startswith('VERSEMENT DE'):
             return "Versement"
-        # DETAIL
         else:
             if re.search(".*[A-Z][A-Z][0-9][0-9].*COMMUNICATION.*:.*DATE.*: "
                          r"[0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail) or \
@@ -95,14 +115,14 @@ class BNPPF:
                 return 'Frais'
             elif re.search(".*CASH DEPOSIT AVEC LA CARTE 6703.*", detail):
                 return 'Cash'
-            elif re.search("^DOMICILIATION EUROPEENNE", detail):
+            elif detail.startswith('DOMICILIATION EUROPEENNE'):
                 return 'Domiciliation'
             elif re.search("^ARCHIVE.*OPERATIONS", detail):
                 return 'Archive'
-            elif re.search("VIREMENT EUROPEEN", detail) or \
-                    re.search("VIREMENT DU COMPTE", detail) or \
-                    re.search("VIREMENT AU COMPTE", detail) or \
-                    re.search("VIREMENT AVEC DATE-MEMO", detail):
+            elif 'VIREMENT EUROPEEN' in detail or \
+                 'VIREMENT DU COMPTE' in detail or \
+                 'VIREMENT AU COMPTE' in detail or \
+                 'VIREMENT AVEC DATE-MEMO' in detail:
                 return 'Virement'
             elif re.search("^AVEC LA CARTE 6703.* P2P MOBIL.* DATE VALEUR : "
                            r"[0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$",
@@ -116,17 +136,18 @@ class BNPPF:
             elif re.search("AVEC LA CARTE 6703.* DATE VALEUR : "
                            r"[0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail):
                 return 'Carte'
-            elif re.search("ORDRE PERMANENT", detail):
+            elif trx_type == 'Ordre permanent' or \
+                    re.search("ORDRE PERMANENT", detail):
                 return 'Ordre Permanent'
-            elif re.search("VERSEMENT CHEQUE", detail):
+            elif 'VERSEMENT CHEQUE' in detail:
                 return 'Versement'
-            elif re.search("^DE VOTRE CARTE PROTON", detail) or \
+            elif detail.startswith('DE VOTRE CARTE PROTON') or \
                 re.search("^REMBOURSEMENT DU SOLDE.*DE VOTRE CARTE PROTON",
                           detail):
                 return 'Proton'
-            elif re.search("^COMFORT PACK ", detail):
+            elif detail.startswith('COMFORT PACK '):
                 return "Redevance"
-            elif re.search("^VOTRE FIDELITE EST RECOMPENSEE ", detail):
+            elif detail.startswith('VOTRE FIDELITE EST RECOMPENSEE '):
                 return "Bonus"
             elif re.search("^(DATE VALEUR|^EXECUTE LE)", detail):
                 return "Divers"
@@ -137,40 +158,56 @@ class BNPPF:
             else:
                 return 'Inconnu'
 
-    def parse(self, line='', format='csv', counterparty=True):
+    def parse(self, line: str = '', format: str = 'csv') -> bool:
         if format == 'csv':
             elements = [element for element in
                         csv.reader([line], delimiter=';')][0]
             map(str(str).strip(), elements)
+
+        if self.csv_version == 3:
+            ref_regex_pattern = r'^20[0-9]{2}-[0-9]{5}$'
+        else:
+            ref_regex_pattern = r'^20[0-9]{2}-[0-9]{4}$'
+
+        if re.search(ref_regex_pattern, elements[0]):
             self.ref = elements[0]
-            if not re.match('^20[0-9]{2}-[0-9]{4}$', self.ref):
-                self.ref = None
-                return True
-            d = datetime.strptime(elements[1], '%d/%m/%Y')
-            self.date = d.strftime('%Y%m%d')
-            if re.search(r'^(\-)?\d{1,3}\.\d{3},\d{1,2}$',  # 2.720,00
-                         elements[3]):
-                self.amount = float(elements[3]
-                                    .replace('.', '').replace(',', '.'))
-            else:
-                self.amount = float(elements[3].replace(',', '.'))
-            self.currency = elements[4]
-            if counterparty:
-                self.counterparty = elements[5]
-                self.detail = elements[6].rstrip('"')
-                self.account = elements[7].replace(' ', '')
-            else:
-                self.counterparty = ''
-                self.detail = elements[5].rstrip('"')
-                self.account = elements[6].replace(' ', '')
-            self.type = self._get_statement_type(
+        else:
+            self.ref = None
+            return True
+
+        d = datetime.strptime(elements[1], '%d/%m/%Y')
+        self.date = d.strftime('%Y%m%d')
+
+        if re.search(r'^(\-)?\d{1,3}\.\d{3},\d{1,2}$',  # 2.720,00
+                     elements[3]):
+            self.amount = float(elements[3].replace('.', '').replace(',', '.'))
+        else:
+            self.amount = float(elements[3].replace(',', '.'))
+        self.currency = elements[4]
+
+        if self.csv_version == 1:
+            self.counterparty = ''
+            self.detail = elements[5].rstrip('"')
+            self.account = elements[6].replace(' ', '')
+        elif self.csv_version == 2:
+            self.counterparty = elements[5]
+            self.detail = elements[6].rstrip('"')
+            self.account = elements[7].replace(' ', '')
+        else:
+            self.account = elements[5].replace(' ', '')
+            self.counterparty = elements[8]
+            self.detail = elements[10].rstrip('"')
+
+        self.type = self._get_statement_type(
                 counterparty=self.counterparty,
-                detail=self.detail)
-            if self.type == "Inconnu":
-                print('ERROR: ', line)
-                return False
-            else:
-                return True
+                detail=self.detail,
+                trx_type=elements[6])
+
+        if self.type == "Inconnu":
+            print('ERROR: ', line)
+            return False
+        else:
+            return True
 
     def get_ref(self):
         return self.ref
