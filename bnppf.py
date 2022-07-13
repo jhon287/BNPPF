@@ -99,7 +99,7 @@ class BNPPF:
                        r"[0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail):
             return 'Carte'
         elif re.search("EASY SAVE", detail):
-            return "Easy Save"    
+            return "Easy Save"
         elif trx_type == 'Ordre permanent' or \
                 re.search("ORDRE PERMANENT", detail):
             return 'Ordre Permanent'
@@ -179,7 +179,8 @@ class BNPPF:
             map(str(str).strip, elements)
 
         if re.search(r'^20[0-9]{2}-([0-9]{4}|[0-9]{5})$', elements[0]):
-            if m := re.match(r'^(\d+)-(\d+)$', elements[0]):
+            m = re.match(r'^(\d+)-(\d+)$', elements[0])
+            if m:
                 self.ref = f'{m.group(1)}-{m.group(2).rjust(5, "0")}'
             else:
                 self.ref = elements[0]
