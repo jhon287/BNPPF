@@ -3,13 +3,14 @@
 import sys
 import os
 import configparser
-import mysql.connector
-import bnppf
 
+from bnppf import BNPPF, get_csv_version
+from mysql.connector import MySQLConnection
+from typing import Dict
 
-accounts = {}
-settings = {}
-con = None
+accounts: Dict[str, Dict[str, int]] = {}
+settings: Dict[str, Dict[str, str]] = {}
+cnx: MySQLConnection
 
 try:
     config = configparser.ConfigParser()
@@ -29,16 +30,16 @@ for directory in [settings['directory']['in'], settings['directory']['done']]:
         os.makedirs(directory)
 
 try:
-    con = mysql.connector.connect(
+    cnx = MySQLConnection(
         user=settings['database']['user'],
         password=settings['database']['password'],
         host=settings['database']['server'],
         port=settings['database']['port'],
         database=settings['database']['name']
     )
-    cur = con.cursor()
+    cur = cnx.cursor()
 
-    csv_version = None
+    csv_version: int = 0
 
     for f in sorted(os.listdir(settings['directory']['in'])):
         # Full path
@@ -59,21 +60,21 @@ try:
                 continue
 
             # First line -> CSV header
-            if csv_version is None:
-                csv_version = bnppf.get_csv_version(line)
+            if csv_version == 0:
+                csv_version = get_csv_version(line)
                 continue
 
-            transaction = bnppf.BNPPF(csv_version=csv_version)
+            transaction: BNPPF = BNPPF(csv_version=csv_version)
 
             # Parse CSV transaction line
             if not transaction.parse(line=line, format='csv'):
-                print('ERROR:', transaction.get_all())
+                print(f'ERROR:{str(transaction.get_all())}')
                 sys.exit(1)
             # Skipping invalid sequence number
-            elif transaction.get_ref() is None:
+            elif not transaction.get_ref():
                 continue
 
-            account = transaction.get_account()
+            account: str = transaction.get_account()
             sql = 'CALL addTransaction("{ref}", "{date}", {amount}, ' \
                   '"{currency}", "{type}", "{detail}", "{account}");'.format(
                     ref=transaction.get_ref(),
@@ -94,8 +95,8 @@ try:
                                settings['directory']['done']))
 
         # Commit changes after each file
-        con.commit()
-        csv_version = None
+        cnx.commit()
+        csv_version = 0
     print('--------------------------------------------------------')
     print('Transactions Summary:')
     for k, v in accounts.items():
@@ -105,5 +106,5 @@ except Exception:
     print('Unexpected error:', sys.exc_info())
     sys.exit(1)
 finally:
-    if con:
-        con.close()
+    if cnx:
+        cnx.close()
