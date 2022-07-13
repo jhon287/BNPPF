@@ -2,7 +2,7 @@ import re
 import csv
 
 from datetime import datetime
-from typing import Union
+from typing import Union, Dict
 
 
 def get_csv_version(line: str = '') -> int:
@@ -245,7 +245,7 @@ class BNPPF:
     def get_account(self) -> str:
         return self.account
 
-    def get_all(self) -> dict[str, Union[str, float]]:
+    def get_all(self) -> Dict[str, Union[str, float]]:
         return {
             'ref': self.ref,
             'date': self.date,
