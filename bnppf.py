@@ -178,13 +178,11 @@ class BNPPF:
                         csv.reader([line], delimiter=';')][0]
             map(str(str).strip, elements)
 
-        if self.csv_version == 3:
-            ref_regex_pattern = r'^20[0-9]{2}-[0-9]{5}$'
-        else:
-            ref_regex_pattern = r'^20[0-9]{2}-[0-9]{4}$'
-
-        if re.search(ref_regex_pattern, elements[0]):
-            self.ref = elements[0]
+        if re.search(r'^20[0-9]{2}-([0-9]{4}|[0-9]{5})$', elements[0]):
+            if m := re.match(r'^(\d+)-(\d+)$', elements[0]):
+                self.ref = f'{m.group(1)}-{m.group(2).rjust(5, "0")}'
+            else:
+                self.ref = elements[0]
         else:
             self.ref = ''
             return True
