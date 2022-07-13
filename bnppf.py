@@ -99,7 +99,6 @@ class BNPPF:
                        r"[0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail):
             return 'Carte'
         elif re.search("EASY SAVE", detail):
-            print('TOTO')
             return "Easy Save"    
         elif trx_type == 'Ordre permanent' or \
                 re.search("ORDRE PERMANENT", detail):
