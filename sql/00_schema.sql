@@ -1,5 +1,6 @@
 USE BNPPF;
 
+-- Transactions
 CREATE TABLE `Transactions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `reference` text NOT NULL,

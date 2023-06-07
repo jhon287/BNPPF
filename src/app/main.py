@@ -2,48 +2,45 @@
 
 import sys
 import os
-import configparser
+import mysql.connector
+import bnppf
+from typing import Dict, Union
 
-from bnppf import BNPPF, get_csv_version
-from mysql.connector import MySQLConnection
-from typing import Dict
 
-accounts: Dict[str, Dict[str, int]] = {}
-settings: Dict[str, Dict[str, str]] = {}
-cnx: MySQLConnection
+accounts: Dict[str, Dict[str, Union[str, int]]] = {}
+con = None
 
-try:
-    config = configparser.ConfigParser()
-    config.read('./conf/settings.ini')
-    for section in config.sections():
-        if section not in settings:
-            settings[section] = {}
-        for key in config[section]:
-            settings[section][key] = config[section][key]
-except Exception as e:
-    print(f'OS error: {e}')
-    sys.exit(1)
+db_hostname = os.environ["DB_HOST"]
+db_name = os.environ["DB_NAME"]
+db_password = os.environ["DB_PASSWORD"]
+db_port = os.environ["DB_PORT"]
+db_username = os.environ["DB_USER"]
 
-for directory in [settings['directory']['in'], settings['directory']['done']]:
+csv_todo = os.environ["CSV_TODO"]
+csv_done = os.environ["CSV_DONE"]
+csv_error = os.environ["CSV_ERROR"]
+
+for directory in [csv_todo, csv_done]:
     if not os.path.exists(directory):
         print(f"Creating '{directory}'...")
         os.makedirs(directory)
 
 try:
-    cnx = MySQLConnection(
-        user=settings['database']['user'],
-        password=settings['database']['password'],
-        host=settings['database']['server'],
-        port=settings['database']['port'],
-        database=settings['database']['name']
+    con = mysql.connector.connect(  # type: ignore
+        user=db_username,
+        password=db_password,
+        host=db_hostname,
+        port=db_port,
+        database=db_name
     )
-    cur = cnx.cursor()
+    cur = con.cursor()  # type: ignore
 
-    csv_version: int = 0
+    csv_version = None
 
-    for f in sorted(os.listdir(settings['directory']['in'])):
+    for f in [filename for filename in
+              sorted(os.listdir(path=csv_todo)) if filename.endswith('.csv')]:
         # Full path
-        f = f"{settings['directory']['in']}/{f}"
+        f = f"{csv_todo}/{f}"
 
         # Check if file in really a file and that is exists
         if not os.path.isfile(f):
@@ -55,23 +52,24 @@ try:
                  open(f, 'r', encoding='utf8', errors='ignore')]
 
         for line in lines:
-            # Empty line ?
+            # Skip empty line
             if not line.strip():
                 continue
 
             # First line -> CSV header
-            if csv_version == 0:
-                csv_version = get_csv_version(line)
+            if csv_version is None:
+                csv_version = bnppf.get_csv_version(line)
                 continue
 
-            transaction: BNPPF = BNPPF(csv_version=csv_version)
+            transaction = bnppf.BNPPF(csv_version=csv_version)
 
             # Parse CSV transaction line
             if not transaction.parse(line=line, format='csv'):
-                print(f'ERROR:{str(transaction.get_all())}')
+                print('ERROR:', transaction.get_all())
+                os.rename(f, f.replace(csv_todo, csv_error))
                 sys.exit(1)
             # Skipping invalid sequence number
-            elif not transaction.get_ref():
+            elif transaction.get_ref() == '':
                 continue
 
             account: str = transaction.get_account()
@@ -85,18 +83,17 @@ try:
                     detail=transaction.get_detail(),
                     account=account,
                   )
-            cur.execute(sql)
+            cur.execute(sql)  # type: ignore
             if account not in accounts:
                 accounts[account] = {'count': 0}
-            accounts[account]['count'] += 1
+            accounts[account]['count'] += 1  # type: ignore
 
         # Move CSV file to done folder
-        os.rename(f, f.replace(settings['directory']['in'],
-                               settings['directory']['done']))
+        os.rename(f, f.replace(csv_todo, csv_done))
 
         # Commit changes after each file
-        cnx.commit()
-        csv_version = 0
+        con.commit()  # type: ignore
+        csv_version = None
     print('--------------------------------------------------------')
     print('Transactions Summary:')
     for k, v in accounts.items():
@@ -106,5 +103,5 @@ except Exception:
     print('Unexpected error:', sys.exc_info())
     sys.exit(1)
 finally:
-    if cnx:
-        cnx.close()
+    if con:
+        con.close()  # type: ignore
