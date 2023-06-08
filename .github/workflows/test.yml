@@ -8,34 +8,42 @@ jobs:
     strategy:
       matrix:
         python:
-          - '3.7'
-          - '3.8'
-          - '3.9'
           - '3.10'
+          - '3.11'
         mariadb:
-          - '10.5'
           - '10.6'
+          - '10.11'
 
     name: Python-${{ matrix.python }} - MariaDB-${{ matrix.mariadb}}
   
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
     - name: Set up Python ${{ matrix.python }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python }}
+
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest
-    - name: Lint with flake8
+      run: pip install -U flake8 pytest pylint pip
+
+    - name: Run Flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Run BNPPF parser application on Docker
+
+
+        
+    - name: Run Integration Testing
       run: |
-        mkdir -vp csv/{in,done}
-        cp tests/csv/*.csv csv/in/
-        PYTHON_VERSION=${{ matrix.python }} MARIADB_VERSION=${{ matrix.mariadb}} docker-compose up --abort-on-container-exit --exit-code-from app
+        mkdir -vp csv/{todo,done,error}
+        chmod 777 csv/{todo,done,error}
+        cp ./tests/csv/*.csv ./csv/todo/
+        PYTHON_VERSION=${{ matrix.python }} \
+        MARIADB_VERSION=${{ matrix.mariadb}} \
+        BUILD_DATE=$(date) \
+        LOOP=0 \
+        docker-compose up --abort-on-container-exit --exit-code-from app
