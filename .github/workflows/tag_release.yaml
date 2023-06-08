@@ -1,0 +1,51 @@
+---
+name: BNPPF Parser Release And Tag
+
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        description: Dry-run for creating tag and release
+        required: true
+        type: boolean
+    secrets:
+      gh_token:
+        description: GitHub token
+        required: true
+    outputs:
+      new_version:
+        description: New tag version generated using conventional commit
+        value: ${{ jobs.tag.outputs.new_version }}
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    name: Tag
+    runs-on: ubuntu-latest
+    outputs:
+      changelog: ${{ steps.tag_version.outputs.changelog }}
+      new_tag: ${{ steps.tag_version.outputs.new_tag }}
+      new_version: ${{ steps.tag_version.outputs.new_version }}
+    steps:
+      - name: Bump Version & Tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          default_bump: false
+          dry_run: ${{ inputs.dry_run }}
+          github_token: ${{ secrets.gh_token }}
+
+  release:
+    if: ${{ !inputs.dry_run && needs.tag.outputs.new_tag != '' }}
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [tag]
+    steps:
+      - name: GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ needs.tag.outputs.new_tag }}
+          name: Release ${{ needs.tag.outputs.new_tag }}
+          body: ${{ needs.tag.outputs.changelog }}
