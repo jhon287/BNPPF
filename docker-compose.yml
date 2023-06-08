@@ -1,9 +1,10 @@
+---
 version: '3'
 services:
   app:
     build:
       context: .
-      args: 
+      args:
         PYTHON_VERSION: ${PYTHON_VERSION:-3.11}
         BUILD_DATE: ${BUILD_DATE:-N/A}
     image: myapp

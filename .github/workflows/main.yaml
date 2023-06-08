@@ -1,0 +1,48 @@
+---
+name: BNPPF Parser Main CI/CD Pipelines
+
+defaults:
+  run:
+    shell: bash
+
+permissions: read-all
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths-ignore:
+      - README.md
+  pull_request:
+    branches:
+      - master
+      - main
+    paths-ignore:
+      - README.md
+
+jobs:
+  tests:
+    name: Tests
+    uses: ./.github/workflows/tests.yaml
+
+  tag_release:
+    name: Create Tag & Release
+    needs: [tests]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/tag_release.yaml
+    with:
+      dry_run: |-
+        ${{
+          github.event_name == 'pull_request' ||
+          (
+            github.event_name == 'push' &&
+            (
+              github.ref != 'refs/heads/master' ||
+              github.ref != 'refs/heads/main'
+            )
+          )
+        }}
+    secrets:
+      gh_token: ${{ secrets.GITHUB_TOKEN }}
