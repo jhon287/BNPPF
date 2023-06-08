@@ -35,8 +35,12 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+    - name: Run Unit Testing
+      working-directory: tests/app
+      env:
+        PYTHONPATH: ../../src/app/
+      run: ./bnppf_test.py
 
-        
     - name: Run Integration Testing
       run: |
         mkdir -vp csv/{todo,done,error}
