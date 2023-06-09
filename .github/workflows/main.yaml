@@ -1,52 +1,24 @@
 ---
 name: BNPPF Parser Main CI/CD Pipelines
 
+on:
+  push:
+    branches: [main]
+    paths-ignore: [README.md]
+  pull_request:
+    branches: [main]
+    paths-ignore: [README.md]
+
 defaults:
   run:
     shell: bash
 
 permissions: read-all
 
-on:
-  push:
-    branches:
-      - master
-      - main
-    paths-ignore:
-      - README.md
-  pull_request:
-    branches:
-      - master
-      - main
-    paths-ignore:
-      - README.md
-
 jobs:
   syntax:
-    name: Check Syntax
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Commitlint
-        uses: wagoid/commitlint-github-action@v5
-        with:
-          failOnWarnings: true
-
-      - name: Run YAMLlint
-        run: pip install --user yamllint && yamllint --strict .
-
-      - name: Install Flake8 and PyLint
-        run: pip install pylint flake8
-
-      - name: Run Flake8
-        run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    name: Syntax
+    uses: ./.github/workflows/syntax.yaml
 
   tests:
     name: Tests
@@ -65,10 +37,7 @@ jobs:
           github.event_name == 'pull_request' ||
           (
             github.event_name == 'push' &&
-            (
-              github.ref != 'refs/heads/master' ||
-              github.ref != 'refs/heads/main'
-            )
+            github.ref != 'refs/heads/main'
           )
         }}
     secrets:
