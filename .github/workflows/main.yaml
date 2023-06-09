@@ -24,6 +24,8 @@ jobs:
     name: Tests
     needs: [syntax]
     uses: ./.github/workflows/tests.yaml
+    with:
+      coverage_min: '95'
 
   tag_release:
     name: Create Tag & Release
