@@ -1,14 +1,14 @@
-#!/usr/bin/env python3
+"""Main application that instantiate BNPPF class."""
 
+from typing import Dict, Union
 import sys
 import os
-import mysql.connector
+from mysql.connector import MySQLConnection, connect  # type: ignore
 import bnppf
-from typing import Dict, Union
 
 
 accounts: Dict[str, Dict[str, Union[str, int]]] = {}
-con = None
+con: MySQLConnection = MySQLConnection()
 
 db_hostname = os.environ["DB_HOST"]
 db_name = os.environ["DB_NAME"]
@@ -26,7 +26,7 @@ for directory in [csv_todo, csv_done]:
         os.makedirs(directory)
 
 try:
-    con = mysql.connector.connect(  # type: ignore
+    con = connect(  # type: ignore
         user=db_username,
         password=db_password,
         host=db_hostname,
@@ -35,7 +35,7 @@ try:
     )
     cur = con.cursor()  # type: ignore
 
-    csv_version = None
+    csv_version: int = 0
 
     for f in [filename for filename in
               sorted(os.listdir(path=csv_todo)) if filename.endswith('.csv')]:
@@ -48,6 +48,7 @@ try:
 
         print(f'Current: {f}')
 
+        # pylint: disable=consider-using-with
         lines = [line.rstrip('\n') for line in
                  open(f, 'r', encoding='utf8', errors='ignore')]
 
@@ -57,32 +58,27 @@ try:
                 continue
 
             # First line -> CSV header
-            if csv_version is None:
-                csv_version = bnppf.get_csv_version(line)
+            if csv_version == 0:
+                csv_version: int = bnppf.get_csv_version(line)
                 continue
 
-            transaction = bnppf.BNPPF(csv_version=csv_version)
+            trx: bnppf.BNPPF = bnppf.BNPPF(csv_version=csv_version)
 
             # Parse CSV transaction line
-            if not transaction.parse(line=line, format='csv'):
-                print('ERROR:', transaction.get_all())
+            if not trx.parse(line=line, file_format='csv'):
+                print('ERROR:', trx.get_all())
                 os.rename(f, f.replace(csv_todo, csv_error))
                 sys.exit(1)
             # Skipping invalid sequence number
-            elif transaction.get_ref() == '':
+            elif trx.get_ref() == '':
                 continue
 
-            account: str = transaction.get_account()
-            sql = 'CALL addTransaction("{ref}", "{date}", {amount}, ' \
-                  '"{currency}", "{type}", "{detail}", "{account}");'.format(
-                    ref=transaction.get_ref(),
-                    date=transaction.get_date(),
-                    amount=transaction.get_amount(),
-                    currency=transaction.get_currency(),
-                    type=transaction.get_type(),
-                    detail=transaction.get_detail(),
-                    account=account,
-                  )
+            account: str = trx.get_account()
+            sql: str = (
+                f'CALL addTransaction("{trx.get_ref()}", "{trx.get_date()}", '
+                f'{trx.get_amount()}, "{trx.get_currency()}", '
+                f'"{trx.get_type()}", "{trx.get_detail()}", "{account}");'
+            )
             cur.execute(sql)  # type: ignore
             if account not in accounts:
                 accounts[account] = {'count': 0}
@@ -93,13 +89,13 @@ try:
 
         # Commit changes after each file
         con.commit()  # type: ignore
-        csv_version = None
+        csv_version: int = 0
     print('--------------------------------------------------------')
     print('Transactions Summary:')
     for k, v in accounts.items():
         print(f" - {k} -> {v['count']}")
     print('--------------------------------------------------------')
-except Exception:
+except Exception:  # pylint: disable=broad-except
     print('Unexpected error:', sys.exc_info())
     sys.exit(1)
 finally:
