@@ -1,3 +1,5 @@
+"""BNPPF Parser Python Module."""
+
 import csv
 from datetime import datetime
 from re import search
@@ -5,6 +7,10 @@ from typing import Dict, List, Union
 
 
 def get_csv_version(line: str = '') -> int:
+    """
+    Function that compute BNPPF CSV version file
+    Return Integer value: 1, 2 or 3
+    """
     if search(r';CONTREPARTIE DE LA TRANSACTION;', line):
         return 2
 
@@ -15,23 +21,27 @@ def get_csv_version(line: str = '') -> int:
 
 
 class BNPPF:
+    """BNPPF Class"""
     ref: str = ''
     date: str = ''
     amount: float = 0.0
     currency: str = 'EUR'
-    type: str = ''
+    trx_type: str = ''
+    counterparty: str = ''
     detail: str = ''
     account: str = ''
     csv_version: int = 3
 
     def __init__(self, ref: str = '', date: str = '', amount: float = 0,
-                 currency: str = 'EUR', type: str = '', detail: str = '',
+                 currency: str = 'EUR', trx_type: str = '',
+                 counterparty: str = '', detail: str = '',
                  account: str = '', csv_version: int = 3) -> None:
         self.ref = ref
         self.date = date
         self.amount = amount
         self.currency = currency
-        self.type = type
+        self.trx_type = trx_type
+        self.counterparty = counterparty
         self.detail = detail
         self.account = account
         self.csv_version = csv_version
@@ -39,11 +49,17 @@ class BNPPF:
     def __str__(self) -> str:
         return f'Ref: {self.ref}. Date: {self.date}. ' \
                f'Amount: {self.amount} {self.currency}. ' \
-               f'Type: {self.type}. Detail: {self.detail}.' \
+               f'Type: {self.trx_type}. Detail: {self.detail}.' \
                f'Account: {self.account}. CSV Version: {self.csv_version}.'
 
+    # FixMe: Reduce method complexity
+    # C901 'BNPPF._get_statement_type' is too complex (21)
     def _get_statement_type(self, counterparty: str = '', detail: str = '',
                             trx_type: str = '') -> str:
+        """
+        Method that compute statement type using counterparty, detail or
+        transaction type.
+        """
         counterparty = counterparty.strip()
         detail = detail.strip()
         trx_type = trx_type.strip()
@@ -62,14 +78,6 @@ class BNPPF:
         if trx_type == 'Ordre permanent' or \
                 search(r"ORDRE PERMANENT", detail):
             return 'Ordre Permanent'
-
-        # Virement
-        if trx_type == 'Virement en euros' or \
-           search(r"^[A-Z][A-Z][0-9][0-9]", counterparty) or \
-           search(r"^[0-9]{3}-[0-9]{7}-[0-9]{2}$", counterparty) or \
-           counterparty.startswith('VIREMENT EUROPEEN ') or \
-           counterparty.startswith('VOTRE EPARGNE AUTOMATIQUE '):
-            return "Virement"
 
         # Assurance
         if search(r"^ASSURANCE((\-|\s)COMPTE)?$", counterparty):
@@ -109,7 +117,9 @@ class BNPPF:
            counterparty == 'PAIEMENT A BANK CARD COMPANY' or \
            search(r"^COMPTE INTERNE MASTERCARD: ETAT DE DEPENSES NUMERO "
                   r"[0-9]+DATE VALEUR : "
-                  r"[0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail):
+                  r"[0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail) or \
+           search(r"^COMPTE INTERNE MASTERCARD.*ETAT"
+                  r" DE DEPENSES NUMERO", detail):
             return "BCC"
 
         # Bonus
@@ -160,23 +170,6 @@ class BNPPF:
            'VERSEMENT CHEQUE' in detail:
             return "Versement"
 
-        # Virement
-        if search(r".*[A-Z][A-Z][0-9][0-9].*COMMUNICATION.*:.*DATE.*: "
-                  r"[0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail) or \
-           search(r"^DU COMPTE NO [A-Z][A-Z][0-9][0-9].*"
-                  r"COMMUNICATION:.*DATE"
-                  r" VALEUR : [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$",
-                  detail) or \
-           search(r".*[A-Z][A-Z][0-9][0-9].*BIC .* REFERENCE DONNEUR "
-                  r"D\'ORDRE : .*COMMUNICATION.*:", detail) or \
-           search(r"PREMIER PRELEVEMENT D'UNE.*DOMICILIATION EUROPEENNE",
-                  detail) or \
-           'VIREMENT EUROPEEN' in detail or \
-           'VIREMENT DU COMPTE' in detail or \
-           'VIREMENT AU COMPTE' in detail or \
-           'VIREMENT AVEC DATE-MEMO' in detail:
-            return 'Virement2'
-
         # Mandat
         if search(r".*NUMERO DE MANDAT :.*[0-9]+ REFERENCE :.*[0-9]+ "
                   r"COMMUNICATION : .*DATE VALEUR : "
@@ -191,20 +184,40 @@ class BNPPF:
         if search(r"^(DATE VALEUR|^EXECUTE LE)", detail):
             return "Divers"
 
-        # Mastercard
-        if search(r"^COMPTE INTERNE MASTERCARD.*ETAT"
-                  r" DE DEPENSES NUMERO", detail):
-            return "Mastercard"
+        # Virement
+        if trx_type == 'Virement en euros' or \
+           search(r"^[A-Z][A-Z][0-9][0-9]", counterparty) or \
+           search(r"^[0-9]{3}-[0-9]{7}-[0-9]{2}$", counterparty) or \
+           counterparty.startswith('VIREMENT EUROPEEN ') or \
+           counterparty.startswith('VOTRE EPARGNE AUTOMATIQUE ') or \
+           search(r".*[A-Z][A-Z][0-9][0-9].*COMMUNICATION.*:.*DATE.*: "
+                  r"[0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$", detail) or \
+           search(r"^DU COMPTE NO [A-Z][A-Z][0-9][0-9].*"
+                  r"COMMUNICATION:.*DATE"
+                  r" VALEUR : [0-9][0-9]\/[0-9][0-9]\/20[0-9][0-9]$",
+                  detail) or \
+           search(r".*[A-Z][A-Z][0-9][0-9].*BIC .* REFERENCE DONNEUR "
+                  r"D\'ORDRE : .*COMMUNICATION.*:", detail) or \
+           search(r"PREMIER PRELEVEMENT D'UNE.*DOMICILIATION EUROPEENNE",
+                  detail) or \
+           'VIREMENT EUROPEEN' in detail or \
+           'VIREMENT DU COMPTE' in detail or \
+           'VIREMENT AU COMPTE' in detail or \
+           'VIREMENT AVEC DATE-MEMO' in detail:
+            return "Virement"
 
         # Inconnu
         return 'Inconnu'
 
-    def parse(self, line: str = '', format: str = 'csv') -> bool:
+    def parse(self, line: str = '', file_format: str = 'csv') -> bool:
+        """
+        BNPPF.parse method is parsing BNPPF CSV line to get necessary
+        statement elements
+        """
         elements: List[str] = []
 
-        if format == 'csv':
-            elements = [element for element in
-                        csv.reader([line], delimiter=';')][0]
+        if file_format == 'csv':
+            elements = list(csv.reader([line], delimiter=';'))[0]
             map(str(str).strip(), elements)  # type: ignore
 
         if self.csv_version == 3:
@@ -218,8 +231,8 @@ class BNPPF:
             self.ref = ''
             return True
 
-        d: datetime = datetime.strptime(elements[1], '%d/%m/%Y')
-        self.date = d.strftime('%Y%m%d')
+        my_date: datetime = datetime.strptime(elements[1], '%d/%m/%Y')
+        self.date = my_date.strftime('%Y%m%d')
 
         # 2.720,00
         if search(r'^(\-)?\d{1,3}\.\d{3},\d{1,2}$', elements[3]):
@@ -241,46 +254,54 @@ class BNPPF:
             self.counterparty = elements[8]
             self.detail = elements[10].rstrip('"')
 
-        self.type = self._get_statement_type(
+        self.trx_type = self._get_statement_type(
             counterparty=self.counterparty,
             detail=self.detail,
             trx_type=elements[6]
         )
 
-        if self.type in ["", "Inconnu"]:
+        if self.trx_type in ["", "Inconnu"]:
             print('ERROR: ', line)
             return False
-        else:
-            return True
+
+        return True
 
     def get_ref(self) -> str:
+        """Return statement reference (str)"""
         return self.ref
 
     def get_date(self) -> str:
+        """Return statement date (str)"""
         return self.date
 
     def get_amount(self) -> float:
+        """Return statement amount (float)"""
         return self.amount
 
     def get_currency(self) -> str:
+        """Return statement currency (str)"""
         return self.currency
 
     def get_type(self) -> str:
-        return self.type
+        """Return statement type (str)"""
+        return self.trx_type
 
     def get_detail(self) -> str:
+        """Return statement detail (str)"""
         return self.detail
 
     def get_account(self) -> str:
+        """Return statement reference (str)"""
         return self.account
 
     def get_all(self) -> Dict[str, Union[str, int, float]]:
+        """Return statement summary (str)"""
         return {
             'ref': self.ref,
             'date': self.date,
             'amount': self.amount,
             'currency': self.currency,
-            'type': self.type,
+            'type': self.trx_type,
             'detail': self.detail,
             'account': self.account,
         }
