@@ -77,6 +77,13 @@ class Test(unittest.TestCase):
         self.trx_csv_v1.parse(line=line)
         self.assertEqual(first=self.trx_csv_v1.get_ref(), second='2017-0170')
 
+        # Empty ref
+        line = ("2017-;11/11/2017;11/11/2017;-0,20;EUR;EASY SAVE - EPARGNE "
+                "AUTOMATIQUE ;POUR COMPTE BE05 1234 5678 9012 DE SABBE "
+                "JONATHANDATE VALEUR : 11/11/2017;BE05123456789012")
+        self.trx_csv_v2.parse(line=line)
+        self.assertEqual(first=self.trx_csv_v2.get_ref(), second='')
+
     def test_amount(self):
         # 2.720.12
         line: str = ("2000-00001;01/01/2000;01/01/2000;-2.720,12;EUR;"
@@ -99,6 +106,28 @@ class Test(unittest.TestCase):
                 "SABBE JONATHAN;;ABCDEFGHIJKLMNOPQRSTUVWXYZ;Accepté;")
         trx.parse(line=line)
         self.assertEqual(first=trx.get_amount(), second=-2720.12)
+
+    def test_detail(self):
+        line: str = (
+            "2000-00001;01/01/2000;01/01/2000;-2720,12;EUR;"
+            "BE05123456789012;Virement en euros;BE05123456789012;"
+            "SABBE JONATHAN;;ABCDEFGHIJKLMNOPQRSTUVWXYZ;Accepté;"
+        )
+        trx: bnppf.BNPPF = bnppf.BNPPF()
+        trx.parse(line=line)
+        self.assertEqual(first=trx.get_detail(),
+                         second='ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+
+    def test_get_all(self):
+        line: str = (
+            "2000-00001;01/01/2000;01/01/2000;-2720,12;EUR;"
+            "BE05123456789012;Virement en euros;BE05123456789012;"
+            "SABBE JONATHAN;;ABCDEFGHIJKLMNOPQRSTUVWXYZ;Accepté;"
+        )
+        trx: bnppf.BNPPF = bnppf.BNPPF()
+        trx.parse(line=line)
+        self.assertTrue(expr=type(trx.get_all()) == dict)
+        self.assertTrue(expr=type(trx.__str__()) == str)
 
     def test_trx_easy_safe(self):
         line: str = ("2022-00234;21/02/2022;21/02/2022;-0.98;EUR;"
@@ -147,6 +176,13 @@ class Test(unittest.TestCase):
                      "01/06/2017;BE05123456789012")
         self.trx_csv_v2.parse(line=line)
         self.assertEqual(first=self.trx_csv_v2.get_type(), second='Redevance')
+
+        line: str = ("2023-00002;01/01/2023;01/01/2023;-1.23;EUR;"
+                     "BE05123456789012;Frais liés au compte;;;;"
+                     "ASSURANCE-COMPTE REFERENCE BANQUE : 2301011603366249 "
+                     "DATE VALEUR : 01/01/2023;Accepté;")
+        self.trx_csv_v3.parse(line=line)
+        self.assertEqual(first=self.trx_csv_v3.get_type(), second='Redevance')
 
     def test_trx_annulation(self):
         line: str = ("2019-1379;30/12/2019;28/12/2019;26.00;EUR;ANNULATION "
@@ -253,6 +289,74 @@ class Test(unittest.TestCase):
                 "DATE VALEUR : 13/12/2022;Accepté;")
         self.trx_csv_v3.parse(line=line)
         self.assertEqual(first=self.trx_csv_v3.get_type(), second='BCC')
+
+    def test_trx_assurance(self):
+        line: str = ("2017-0007;06/01/2017;01/01/2017;-1,23;EUR;ASSURANCE "
+                     "COMPTE                ;DATE VALEUR : 01/01/2017 ;"
+                     "BE05123456789012")
+        self.trx_csv_v2.parse(line=line)
+        self.assertEqual(first=self.trx_csv_v2.get_type(), second='Assurance')
+
+    def test_trx_retrait(self):
+        line: str = ("2017-0346;03/06/2017;03/06/2017;-12,34;EUR;RETRAIT "
+                     "D'ARGENT AUTRES DISTRIBU;AVEC LA CARTE 6703 04XX XXXX "
+                     "X200 2 JODOIGNE          JODOIGNE03/06/2017 DATE "
+                     "VALEUR : 03/06/2017;BE05123456789012")
+        self.trx_csv_v2.parse(line=line)
+        self.assertEqual(first=self.trx_csv_v2.get_type(), second='Retrait')
+
+    def test_trx_proton(self):
+        line: str = ('"2014-0497";"02/10/2014";"02/10/2014";"-10,00";"EUR";'
+                     '"CHARGEMENT CARTE PROTON";"NUMERO 6703 04XX XXXX X200 '
+                     '2 DU 02-10-2014 COMMUNICATION: BANKSYS HALL    1130 '
+                     'DATE VALEUR : 02/10/2014";"BE05 1234 5678 9012 ";')
+        self.trx_csv_v2.parse(line=line)
+        self.assertEqual(first=self.trx_csv_v2.get_type(), second='Proton')
+
+    def test_trx_frais(self):
+        line: str = ('"2014-0173";"07/08/2014";"01/08/2014";"-1,23";"EUR";'
+                     '"FRAIS MENSUELS D\'EQUIPEMENT";"PERIODE DU 01-08-2014 '
+                     'AU 31-08-2014 DETAILS VOIR ANNEXE EXECUTE LE 06-08 '
+                     'DATEVALEUR : 01/08/2014";"BE05 1234 5678 9012 "')
+        self.trx_csv_v2.parse(line=line)
+        self.assertEqual(first=self.trx_csv_v2.get_type(), second='Frais')
+
+    def test_trx_versement(self):
+        line: str = ('"2011-0240";"11/08/2011";"13/08/2011";"+123,45";"EUR"'
+                     ';"VERSEMENT CHEQUE";"VERSEMENT CHEQUE                '
+                     '         13-08          600,00+NUMERO 5426475949 VIA '
+                     'HAMME-MILLE DATE VALEUR : 13/08/2011 ";'
+                     '"BE05 1234 5678 9012 "')
+        self.trx_csv_v2.parse(line=line)
+        self.assertEqual(first=self.trx_csv_v2.get_type(), second='Versement')
+
+    def test_trx_mandat(self):
+        line: str = ("2017-0350;06/06/2017;06/06/2017;-20,00;EUR;"
+                     "BE05123456789012;GREENPEACE BELGIUM NUMERO DE MANDAT "
+                     ":GPB1234567890 REFERENCE : 000123456789 COMMUNICATION "
+                     ": 1234567890 DATE VALEUR : 06/06/2017;BE05123456789012")
+        self.trx_csv_v2.parse(line=line)
+        self.assertEqual(first=self.trx_csv_v2.get_type(), second='Mandat')
+
+    def test_trx_archive(self):
+        line: str = ('"2015-0427";"06/07/2015";"05/07/2015";"-5,00";"EUR";'
+                     '"000-0000000-00";"ARCHIVE D\'OPERATIONS                '
+                     '     05-07            5,00- DOSSIER NO '
+                     '0000001180-1-495654 COMPTE NUMERO 123-4567890-12 '
+                     'EXECUTE LE 05-07 DATE VALEUR : 05/07/2015";'
+                     '"BE05 1234 5678 9012 ')
+        self.trx_csv_v2.parse(line=line)
+        self.assertEqual(first=self.trx_csv_v2.get_type(), second='Archive')
+
+    def test_trx_inconnu(self):
+        line: str = ('"2015-0427";"06/07/2015";"05/07/2015";"-5,00";"EUR";'
+                     '"000-0000000-00";"ARCHIVE D\'OPERATIONS                '
+                     '     05-07            5,00- DOSSIER NO '
+                     '0000001180-1-495654 COMPTE NUMERO 123-4567890-12 '
+                     'EXECUTE LE 05-07 DATE VALEUR : 05/07/2015";'
+                     '"BE05 1234 5678 9012 ')
+        self.trx_csv_v1.parse(line=line)
+        self.assertEqual(first=self.trx_csv_v1.get_type(), second='Inconnu')
 
 
 if __name__ == '__main__':

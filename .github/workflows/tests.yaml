@@ -3,11 +3,16 @@ name: BNPPF Parser Tests
 
 on:
   workflow_call:
+    inputs:
+      coverage_min:
+        description: BNPPF code minimum coverage
+        required: true
+        type: string
 
 permissions: read-all
 
 jobs:
-  test:
+  tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -24,19 +29,35 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python }}
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install Pytest
-        run: pip install pytest
+      - name: Install Pytest And Coverage
+        run: pip install pytest coverage
 
       - name: Run Unit Testing
         working-directory: tests/app
         env:
           PYTHONPATH: ../../src/app/
-        run: ./bnppf_test.py
+        run: coverage run -m pytest
+
+      - name: Check Coverage
+        id: coverage
+        continue-on-error: true
+        working-directory: tests/app
+        run: coverage report -m --fail-under ${{ inputs.coverage_min }} ../../src/app/bnppf.py
+
+      - name: Coverage Result
+        run: |
+          if [ "${{ steps.coverage.outcome }}" == "failure" ]
+          then
+            echo "::warning::BNPPF code coverage NOK 💀 (<${{ inputs.coverage_min }}%)"
+            exit 1
+          else
+            echo "::notice::BNPPF code coverage OK 🎉 (>${{ inputs.coverage_min }}%)"
+          fi
 
       - name: Run Integration Testing (Docker)
         run: |
