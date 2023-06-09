@@ -23,12 +23,30 @@ jobs:
       - name: Run YAMLlint
         run: pip install --user yamllint && yamllint --strict .
 
-      - name: Install Flake8 and PyLint
+      - name: Install PyLint And Flake8
         run: pip install pylint flake8
 
       - name: Run Flake8
         run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 --select=E9,F63,F7,F82 --show-source --statistics .
+
+          # Run Flake8 (The GitHub editor is 127 chars wide)
+          flake8 --max-line-length=127 --statistics .
+
+          # Exit-zero treats all complexity errors as warnings
+          flake8 --exit-zero --max-complexity=10 .
+
+      - name: Run PyLint
+        id: pylint
+        continue-on-error: true
+        run: pylint ./src/app/*.py
+
+      - name: PyLint Result
+        run: |
+          if [ "${{ steps.pylint.outcome }}" == "failure" ]
+          then
+            echo "::warning::BNPPF PyLint NOK 💀"
+          else
+            echo "::notice::BNPPF PyLint OK 🎉"
+          fi
